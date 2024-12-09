@@ -9,10 +9,10 @@ void fast_print(HANDLE handle, std::string str) {
     WriteConsole(handle, str.c_str(), str.length(), nullptr, nullptr);
 }
 
-std::string get_pai_content(const std::string& path) {
+std::string get_laf_content(const std::string& path) {
     std::ifstream file(path.c_str());
     if(!file.is_open()) {
-        std::cerr << "[PAI] File not found." << std::endl;
+        std::cerr << "[LAF] File not found." << std::endl;
         exit(1);
     }
 
@@ -30,7 +30,7 @@ size_t hex_to_uint(const std::string& str) {
         } else if(ch >= 'A' && ch <= 'F') {
             result += ((ch - 'A') + 10);
         } else {
-            std::cerr << "[PAI] Invalid hex character: " << (int)ch << '(' << ch << ')' << std::endl;
+            std::cerr << "[LAF] Invalid hex character: " << (int)ch << '(' << ch << ')' << std::endl;
             exit(1);
         }
     }
@@ -45,8 +45,8 @@ struct Pai {
     bool fullscreen = false, reverse = false;
 
     Pai(std::string content) {
-        if(content.substr(0, 3) != "PAI") {
-            std::cerr << "[PAI] File is not a PAI format. (missing PAI header)." << std::endl;
+        if(content.substr(0, 3) != "LAF") {
+            std::cerr << "[LAF] File is not a LAF format. (missing LAF header)." << std::endl;
             exit(1);
         }
 
@@ -69,7 +69,7 @@ struct Pai {
                     reverse = true;
                     break;
                 default:
-                    std::cerr << "[PAI] Unknown header option: " << (int)ch << '(' << ch << "\n";
+                    std::cerr << "[LAF] Unknown header option: " << (int)ch << '(' << ch << "\n";
                     std::cerr << "    Perhaps missing header termination (\"|\")" << std::endl;
                     exit(1);
             }
@@ -81,7 +81,7 @@ struct Pai {
         size_t row_count = content.length() / (width * height);
 
         if(content.length() != width * height * row_count) {
-            std::cerr << "[PAI] Content length does not match frame dimensions." << std::endl;
+            std::cerr << "[LAF] Content length does not match frame dimensions." << std::endl;
             exit(1);
         }
 
@@ -107,19 +107,19 @@ struct Pai {
 
 int main(int argc, char* argv[]) {
     if(argc == 1) {
-        std::cout << "[PAI] No input was provided." << std::endl;
+        std::cout << "[LAF] No input was provided." << std::endl;
         return 1;
     }
 
     HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
     if(!handle) {
-        std::cerr << "[PAI] Failed to handle the console." << std::endl;
+        std::cerr << "[LAF] Failed to handle the console." << std::endl;
         return 1;
     }
 
     std::string path = argv[1];
-    std::string pai_content = get_pai_content(path);
-    Pai image(pai_content);
+    std::string laf_content = get_laf_content(path);
+    Pai image(laf_content);
 
     HWND wind = GetConsoleWindow();
     if(image.fullscreen) {
