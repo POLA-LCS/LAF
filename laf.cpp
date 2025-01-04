@@ -81,7 +81,7 @@ struct Pai {
         size_t row_count = content.length() / (width * height);
 
         if(content.length() != width * height * row_count) {
-            std::cerr << "[LAF] Content length does not match frame dimensions." << std::endl;
+            std::cerr << "[LAF] Content length (" << content.length() << ") does not match frame dimensions. (" << width << ", " << height << ')' << std::endl;
             exit(1);
         }
 
