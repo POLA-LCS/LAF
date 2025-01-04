@@ -128,19 +128,19 @@ int main(int argc, char* argv[]) {
         SendMessage(wind, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
     }
 
+    system("cls");
     while(true) {
         bool running = true;
         size_t frame_rate = 1000 / ((image.frec == 0) ? 1 : image.frec);
         for(const Frame& frame : image.get_frames()) {
             running = !kbhit();
             if(!running) break;
-            system("cls");
+            SetConsoleCursorPosition(handle, {0, 0});
             fast_print(handle, frame);
             Sleep(frame_rate);
         }
         if(!running) break;
     }
-
 
     if(image.fullscreen) {
         SendMessage(wind, WM_SYSCOMMAND, SC_RESTORE, 0);
