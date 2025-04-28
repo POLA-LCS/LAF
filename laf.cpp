@@ -4,13 +4,14 @@
 #include <string>
 #include <fstream>
 #include <conio.h>
+#include <stdexcept>
 
 using Frame = std::string;
 
 std::string get_laf_content(const std::string& path) {
     std::ifstream file(path.c_str());
     if(!file.is_open())
-        throw std::exception("File not found.");
+        throw std::logic_error("File not found.");
 
     std::string content;
     for(
@@ -27,7 +28,7 @@ size_t hex_to_uint(const std::string& str) {
         result *= 16;
         if(ch >= '0' && ch <= '9') result += (ch - '0');        else 
         if(ch >= 'A' && ch <= 'F') result += ((ch - 'A') + 10); else
-        throw std::exception(("Invalid hex character: " + std::to_string(static_cast<int>(ch)) + "(" + ch + ")").c_str());
+        throw std::logic_error(("Invalid hex character: " + std::to_string(static_cast<int>(ch)) + "(" + ch + ")").c_str());
     }
     return result;
 }
@@ -39,7 +40,7 @@ struct LAF {
 
     LAF(std::string content) {
         if(content.substr(0, 3) != "LAF")
-            throw std::exception("File is not a LAF format. (missing \"LAF\" tag in header).");
+            throw std::logic_error("File is not a LAF format. (missing \"LAF\" tag in header).");
 
         width  = hex_to_uint(content.substr(3, 3));
         height = hex_to_uint(content.substr(6, 3));
@@ -60,7 +61,7 @@ struct LAF {
                     reverse = true;
                     break;
                 default:
-                    throw std::exception(
+                    throw std::logic_error(
                         (("(Unknown header option: " + std::to_string(static_cast<int>(ch)) + "(" + ch + ")\n") + (
                             "Perhaps missing header termination (\"|\")")).c_str()
                     );
@@ -73,7 +74,7 @@ struct LAF {
         size_t row_count = content.length() / (width * height);
 
         if(content.length() != width * height * row_count) {
-            throw std::exception(
+            throw std::logic_error(
                 ("Content length (" + std::to_string(content.length()) + ") does not match frame dimensions (" + std::to_string(width) + ", " + std::to_string(height) + ")").c_str()
             );
         }
@@ -100,11 +101,11 @@ struct LAF {
 int main(int argc, char* argv[]) {
     try {
         if(argc == 1)
-            throw std::exception("No input was provided.");
+            throw std::logic_error("No input was provided.");
     
         HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
         if(handle == INVALID_HANDLE_VALUE)
-            throw std::exception("Failed to handle the console.");
+            throw std::logic_error("Failed to handle the console.");
     
         const std::string path(argv[1]);
 
@@ -134,7 +135,7 @@ int main(int argc, char* argv[]) {
         if(laf.fullscreen)
             SendMessage(wind, WM_SYSCOMMAND, SC_RESTORE, 0);
         
-    } catch(const std::exception& error) {
+    } catch(const std::logic_error& error) {
         std::cerr << "[LAF] " + std::string(error.what());
         return 1;
     }
