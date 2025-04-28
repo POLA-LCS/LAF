@@ -5,19 +5,19 @@
 #include <fstream>
 #include <conio.h>
 
-void fast_print(HANDLE handle, std::string str) {
-    WriteConsole(handle, str.c_str(), str.length(), nullptr, nullptr);
-}
+using Frame = std::string;
 
 std::string get_laf_content(const std::string& path) {
     std::ifstream file(path.c_str());
-    if(!file.is_open()) {
-        std::cerr << "[LAF] File not found." << std::endl;
-        exit(1);
-    }
+    if(!file.is_open())
+        throw std::exception("File not found.");
 
     std::string content;
-    for(std::string line; getline(file, line); content += line);
+    for(
+        std::string line;
+        getline(file, line);
+        content += line
+    );
     return content;
 }
 
@@ -25,37 +25,28 @@ size_t hex_to_uint(const std::string& str) {
     size_t result = 0;
     for(const char& ch : str) {
         result *= 16;
-        if(ch >= '0' && ch <= '9') {
-            result += (ch - '0');
-        } else if(ch >= 'A' && ch <= 'F') {
-            result += ((ch - 'A') + 10);
-        } else {
-            std::cerr << "[LAF] Invalid hex character: " << (int)ch << '(' << ch << ')' << std::endl;
-            exit(1);
-        }
+        if(ch >= '0' && ch <= '9') result += (ch - '0');        else 
+        if(ch >= 'A' && ch <= 'F') result += ((ch - 'A') + 10); else
+        throw std::exception(("Invalid hex character: " + std::to_string(static_cast<int>(ch)) + "(" + ch + ")").c_str());
     }
     return result;
 }
 
-typedef std::string Frame;
-
-struct Pai {
+struct LAF {
     std::string content;
     size_t width, height, frec;
     bool fullscreen = false, reverse = false;
 
-    Pai(std::string content) {
-        if(content.substr(0, 3) != "LAF") {
-            std::cerr << "[LAF] File is not a LAF format. (missing LAF header)." << std::endl;
-            exit(1);
-        }
+    LAF(std::string content) {
+        if(content.substr(0, 3) != "LAF")
+            throw std::exception("File is not a LAF format. (missing \"LAF\" tag in header).");
 
         width  = hex_to_uint(content.substr(3, 3));
         height = hex_to_uint(content.substr(6, 3));
         frec   = hex_to_uint(content.substr(9, 2));
-        if(!frec) frec = 4;
+        if(frec <= 0) frec = 4;
         for(size_t i = 11; i < content.length(); i++) {
-            char ch = content[i];
+            const char& ch = content[i];
             if(ch == '|') {
                 this->content = content.substr(i + 1);
                 break;
@@ -69,9 +60,10 @@ struct Pai {
                     reverse = true;
                     break;
                 default:
-                    std::cerr << "[LAF] Unknown header option: " << (int)ch << '(' << ch << "\n";
-                    std::cerr << "    Perhaps missing header termination (\"|\")" << std::endl;
-                    exit(1);
+                    throw std::exception(
+                        (("(Unknown header option: " + std::to_string(static_cast<int>(ch)) + "(" + ch + ")\n") + (
+                            "Perhaps missing header termination (\"|\")")).c_str()
+                    );
             }
         }
     }
@@ -81,8 +73,9 @@ struct Pai {
         size_t row_count = content.length() / (width * height);
 
         if(content.length() != width * height * row_count) {
-            std::cerr << "[LAF] Content length (" << content.length() << ") does not match frame dimensions. (" << width << ", " << height << ')' << std::endl;
-            exit(1);
+            throw std::exception(
+                ("Content length (" + std::to_string(content.length()) + ") does not match frame dimensions (" + std::to_string(width) + ", " + std::to_string(height) + ")").c_str()
+            );
         }
 
         for(size_t i = 0; i < row_count; ++i) {
@@ -100,50 +93,50 @@ struct Pai {
                 frames.push_back(frames[size]);
             }
         }
-
         return frames;
     }
 };
 
 int main(int argc, char* argv[]) {
-    if(argc == 1) {
-        std::cout << "[LAF] No input was provided." << std::endl;
-        return 1;
-    }
+    try {
+        if(argc == 1)
+            throw std::exception("No input was provided.");
+    
+        HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        if(handle == INVALID_HANDLE_VALUE)
+            throw std::exception("Failed to handle the console.");
+    
+        const std::string path(argv[1]);
 
-    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    if(!handle) {
-        std::cerr << "[LAF] Failed to handle the console." << std::endl;
-        return 1;
-    }
+        // The ENGINE !!!
+        const LAF laf(get_laf_content(path));
 
-    std::string path = argv[1];
-    std::string laf_content = get_laf_content(path);
-    Pai image(laf_content);
-
-    HWND wind = GetConsoleWindow();
-    if(image.fullscreen) {
-        DWORD newstyle = GetWindowLong(wind, GWL_STYLE);
-        SetWindowLong(wind, GWL_STYLE, newstyle & ~WS_OVERLAPPEDWINDOW);
-        SendMessage(wind, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
-    }
-
-    system("cls");
-    while(true) {
-        bool running = true;
-        size_t frame_rate = 1000 / ((image.frec == 0) ? 1 : image.frec);
-        for(const Frame& frame : image.get_frames()) {
-            running = !kbhit();
-            if(!running) break;
-            SetConsoleCursorPosition(handle, {0, 0});
-            fast_print(handle, frame);
-            Sleep(frame_rate);
+        HWND wind = GetConsoleWindow();
+        if(laf.fullscreen) {
+            DWORD newstyle = GetWindowLong(wind, GWL_STYLE);
+            SetWindowLong(wind, GWL_STYLE, newstyle & ~WS_OVERLAPPEDWINDOW);
+            SendMessage(wind, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
         }
-        if(!running) break;
-    }
-
-    if(image.fullscreen) {
-        SendMessage(wind, WM_SYSCOMMAND, SC_RESTORE, 0);
+    
+        system("cls");
+        bool running = true;
+        while(running) {
+            size_t frame_rate = 1000 / ((laf.frec == 0) ? 1 : laf.frec);
+            const std::vector<Frame>& frames = laf.get_frames();
+            for(size_t i = 0; i < frames.size() && running; i++, running = !kbhit()) {
+                const Frame& frame = frames[i];
+                SetConsoleCursorPosition(handle, {0, 0});
+                WriteConsole(handle, frame.c_str(), frame.length(), nullptr, nullptr);
+                Sleep(frame_rate);
+            }
+        }
+    
+        if(laf.fullscreen)
+            SendMessage(wind, WM_SYSCOMMAND, SC_RESTORE, 0);
+        
+    } catch(const std::exception& error) {
+        std::cerr << "[LAF] " + std::string(error.what());
+        return 1;
     }
 
     return 0;
