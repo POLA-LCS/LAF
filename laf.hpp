@@ -1,138 +1,131 @@
+#ifndef LAF_ENGINE_HPP
+#define LAF_ENGINE_HPP
+
 #include <iostream>
 #include <vector>
-#include <windows.h>
 #include <string>
 #include <fstream>
-#include <conio.h>
-#include <stdexcept>
 #include <sstream>
+#include <cstdint>
+#include <stdexcept>
+#include <windows.h>
+#include <conio.h>
 
-using Frame = std::string;
+/**
+ * Manages Windows Console state using RAII to ensure 
+ * the terminal is restored even if the program crashes.
+ */
+struct ConsoleContext {
+    HANDLE handle;
+    HWND window;
+    bool is_fullscreen;
+    CONSOLE_CURSOR_INFO original_cursor;
 
-std::string get_laf_content(const std::string& path) {
-    std::ifstream file(path.c_str());
-    if(!file.is_open())
-        throw std::runtime_error("File not found.");
-    return (std::stringstream() << file.rdbuf()).str();
-}
+    ConsoleContext(bool fullscreen) : is_fullscreen(fullscreen) {
+        handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        window = GetConsoleWindow();
 
-size_t hex_to_uint(const std::string& str) {    
-    size_t result = 0;
-    for(const char& ch : str) {
-        result *= 16;
-        if(ch >= '0' && ch <= '9') result += (ch - '0');        else 
-        if(ch >= 'A' && ch <= 'F') result += ((ch - 'A') + 10); else
-        throw std::logic_error(("Invalid hex character: " + std::to_string(static_cast<int>(ch)) + "(" + ch + ")").c_str());
-    }
-    return result;
-}
+        GetConsoleCursorInfo(handle, &original_cursor);
+        CONSOLE_CURSOR_INFO hide_cursor = original_cursor;
+        hide_cursor.bVisible = FALSE;
+        SetConsoleCursorInfo(handle, &hide_cursor);
 
-struct LAF {
-    std::string content;
-    size_t width, height, frec;
-    bool fullscreen = false, reverse = false;
-
-    LAF(std::string content) {
-        if(content.substr(0, 3) != "LAF")
-            throw std::logic_error("File is not a LAF format. (missing \"LAF\" tag in header).");
-
-        width  = hex_to_uint(content.substr(3, 3));
-        height = hex_to_uint(content.substr(6, 3));
-        frec   = hex_to_uint(content.substr(9, 2));
-        if(frec <= 0) frec = 4;
-        for(size_t i = 11; i < content.length(); i++) {
-            const char& ch = content[i];
-            if(ch == '|') {
-                this->content = content.substr(i + 1);
-                break;
-            }
-
-            switch(ch) {
-                case 'F':
-                    fullscreen = true;
-                    break;
-                case 'R':
-                    reverse = true;
-                    break;
-                default:
-                    throw std::logic_error(
-                        (("(Unknown header option: " + std::to_string(static_cast<int>(ch)) + "(" + ch + ")\n") + (
-                            "Perhaps missing header termination (\"|\")")).c_str()
-                    );
-            }
+        if (is_fullscreen) {
+            DWORD style = GetWindowLong(window, GWL_STYLE);
+            SetWindowLong(window, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
+            SendMessage(window, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
         }
     }
 
-    std::vector<Frame> get_frames() const {
-        std::vector<Frame> frames;
-        size_t row_count = content.length() / (width * height);
-
-        if(content.length() != width * height * row_count) {
-            throw std::logic_error(
-                ("Content length (" + std::to_string(content.length()) + ") does not match frame dimensions (" + std::to_string(width) + ", " + std::to_string(height) + ")").c_str()
-            );
+    ~ConsoleContext() {
+        SetConsoleCursorInfo(handle, &original_cursor);
+        if (is_fullscreen) {
+            SendMessage(window, WM_SYSCOMMAND, SC_RESTORE, 0);
         }
-
-        for(size_t i = 0; i < row_count; ++i) {
-            Frame frame;
-            for(size_t row = 0; row < height; ++row) {
-                size_t offset = (i * height + row) * width;
-                frame += content.substr(offset, width) + '\n';
-            }
-            frames.push_back(frame);
-        }
-
-        if(reverse) {
-            size_t size = frames.size();
-            while(size --> 0) {
-                frames.push_back(frames[size]);
-            }
-        }
-        return frames;
     }
 };
 
-int main(int argc, char* argv[]) {
-    try {
-        if(argc == 1)
-            throw std::logic_error("No input was provided.");
-    
-        HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
-        if(handle == INVALID_HANDLE_VALUE)
-            throw std::logic_error("Failed to handle the console.");
-    
-        const std::string path(argv[1]);
-
-        // The ENGINE !!!
-        const LAF laf(get_laf_content(path));
-
-        HWND wind = GetConsoleWindow();
-        if(laf.fullscreen) {
-            DWORD newstyle = GetWindowLong(wind, GWL_STYLE);
-            SetWindowLong(wind, GWL_STYLE, newstyle & ~WS_OVERLAPPEDWINDOW);
-            SendMessage(wind, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+/**
+ * Core engine to parse and render LAF (List of Ascii Frames) files.
+ */
+class LAFEngine {
+public:
+    explicit LAFEngine(const std::string& path) {
+        std::ifstream file(path);
+        if (!file) {
+            throw std::runtime_error("Source file not found at: " + path);
         }
-    
-        system("cls");
-        bool running = true;
-        while(running) {
-            size_t frame_rate = 1000 / ((laf.frec == 0) ? 1 : laf.frec);
-            const std::vector<Frame>& frames = laf.get_frames();
-            for(size_t i = 0; i < frames.size() && running; i++, running = !kbhit()) {
-                const Frame& frame = frames[i];
-                SetConsoleCursorPosition(handle, {0, 0});
-                WriteConsole(handle, frame.c_str(), frame.length(), nullptr, nullptr);
-                Sleep(frame_rate);
+
+        std::stringstream ss;
+        ss << file.rdbuf();
+        std::string raw = ss.str();
+
+        if (raw.size() < 12 || raw.substr(0, 3) != "LAF") {
+            throw std::runtime_error("Invalid file format: Missing LAF header.");
+        }
+
+        width = std::stoul(raw.substr(3, 3), nullptr, 16);
+        height = std::stoul(raw.substr(6, 3), nullptr, 16);
+        frec = std::stoul(raw.substr(9, 2), nullptr, 16);
+        
+        if (frec == 0) frec = 4;
+
+        size_t data_start = raw.find('|');
+        if (data_start == std::string::npos) {
+            throw std::runtime_error("Invalid file structure: Missing data separator '|'.");
+        }
+
+        std::string flags = raw.substr(11, data_start - 11);
+        bool reverse_flag = (flags.find('R') != std::string::npos);
+        bool fullscreen_flag = (flags.find('F') != std::string::npos);
+        
+        default_fullscreen = fullscreen_flag;
+        std::string content = raw.substr(data_start + 1);
+
+        size_t chars_per_frame = width * height;
+        if (chars_per_frame == 0 || content.length() % chars_per_frame != 0) {
+            throw std::runtime_error("Data length does not match specified dimensions.");
+        }
+
+        size_t total_frames = content.length() / chars_per_frame;
+        for (size_t i = 0; i < total_frames; ++i) {
+            std::string frame_buffer;
+            for (size_t r = 0; r < height; ++r) {
+                frame_buffer += content.substr((i * height + r) * width, width) + "\n";
+            }
+            frames.push_back(frame_buffer);
+        }
+
+        if (reverse_flag) {
+            for (int i = static_cast<int>(frames.size()) - 1; i >= 0; --i) {
+                frames.push_back(frames[i]);
             }
         }
-    
-        if(laf.fullscreen)
-            SendMessage(wind, WM_SYSCOMMAND, SC_RESTORE, 0);
-        
-    } catch(const std::logic_error& error) {
-        std::cerr << "[LAF] " + std::string(error.what());
-        return 1;
     }
 
-    return 0;
-}
+    void play() {
+        ConsoleContext context(default_fullscreen);
+        uint32_t frame_delay = 1000 / frec;
+
+        system("cls");
+
+        while (!_kbhit()) {
+            for (const auto& frame : frames) {
+                SetConsoleCursorPosition(context.handle, {0, 0});
+                WriteConsoleA(context.handle, frame.c_str(), static_cast<DWORD>(frame.length()), nullptr, nullptr);
+                
+                if (_kbhit()) return;
+                Sleep(frame_delay);
+            }
+        }
+    }
+
+private:
+    uint32_t width{0};
+    uint32_t height{0};
+    uint32_t frec{4};
+    bool default_fullscreen{false};
+    std::vector<std::string> frames;
+};
+
+#endif
