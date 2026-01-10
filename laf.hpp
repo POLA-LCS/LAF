@@ -5,21 +5,15 @@
 #include <fstream>
 #include <conio.h>
 #include <stdexcept>
+#include <sstream>
 
 using Frame = std::string;
 
 std::string get_laf_content(const std::string& path) {
     std::ifstream file(path.c_str());
     if(!file.is_open())
-        throw std::logic_error("File not found.");
-
-    std::string content;
-    for(
-        std::string line;
-        getline(file, line);
-        content += line
-    );
-    return content;
+        throw std::runtime_error("File not found.");
+    return (std::stringstream() << file.rdbuf()).str();
 }
 
 size_t hex_to_uint(const std::string& str) {    
