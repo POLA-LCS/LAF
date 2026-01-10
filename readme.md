@@ -1,33 +1,37 @@
-# LAF (List of Ascii Frames)
-LAF is a simple format for storing a sequence of ASCII frames.  
-That you can reproduce with `laf.exe`
+# LAF (List of Ascii Frames) v2.0.0
 
-## Future features
-- [X] Easy
-- [ ] Add support for gif convertion into LAF file.
-- [ ] Turn format into byte code.
-- [ ] COLORS!!!.
+A simple player for `.laf` files for Windows.
 
-## Header
-Images, videos or even gifs or bitmaps has it's own header file.  
-This in order to detect which file are you dealing with.  
+## LAF
 
-### Format
-`LAFWWWHHHFF|` where:
-- WWW is the width of each frame.
-- HHH is the height of each frame.
-- FF is the framerate (if 0, 4)
-- | is the end of the header.
+A LAF file is just a special format for storing ascii frames.  
+Images, videos, gifs or even bitmaps has it's own header to distinguish between them.  
+This in order to detect which file are you dealing with.
+
+### Header
+
 Values are represented in hexadecimal.
 
+`LAFWWWHHHFF|` where:
+
+- `LAF` the header tag saying "Heey, I'm a LAF file!"
+- `WWW` is the width of each frame.
+- `HHH` is the height of each frame.
+- `FF` is the framerate (the default is 4 if 0 is provided).
+- `|` is the end of the header.
+
 ### Flags
+
 Flags are options that can be used to customize the behaviour of the LAF file.  
-This flags goes between frame rate value and end of the header.  
-- `F` : when reproducing a LAF the console switches into fullscreen.
-- `R` : the LAF will repeat backwards after last frame.
+This flags goes before end of the header and after framerate.
+
+- `F`: when reproducing a LAF the console switches into fullscreen.
+- `R`: the LAF will repeat backwards after last frame.
 
 ## Examples
+
 Moving in
+
 ```
 LAF00500207|
 OOOOO
