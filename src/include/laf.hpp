@@ -101,9 +101,9 @@ struct LAFEngine {
             throw std::runtime_error("Header error: Missing LAF identifier.");
         }
 
-        width  = std::stoul(raw_content.substr(WIDTH_START, WIDTH_SIZE), nullptr, 16);
+        width = std::stoul(raw_content.substr(WIDTH_START, WIDTH_SIZE), nullptr, 16);
         height = std::stoul(raw_content.substr(HEIGHT_START, HEIGHT_SIZE), nullptr, 16);
-        frec   = std::stoul(raw_content.substr(FREC_START, FREC_SIZE), nullptr, 16);
+        frec = std::stoul(raw_content.substr(FREC_START, FREC_SIZE), nullptr, 16);
         if(frec == 0) frec = FREC_DEFAULT;
 
         size_t data_start = raw_content.find('|');
@@ -112,9 +112,9 @@ struct LAFEngine {
         }
 
         std::string flags = raw_content.substr(HEADER_DATA_END, data_start - HEADER_DATA_END);
-        reverse_flag    = (flags.find('R') != std::string::npos);
+        reverse_flag = (flags.find('R') != std::string::npos);
         fullscreen_flag = (flags.find('F') != std::string::npos);
-        stop_flag       = (flags.find('S') != std::string::npos);
+        stop_flag = (flags.find('S') != std::string::npos);
 
         std::string content = raw_content.substr(data_start + 1);
         content.erase(std::remove(content.begin(), content.end(), '\n'), content.end());
@@ -156,14 +156,19 @@ struct LAFEngine {
 
         SetConsoleCursorPosition(context.handle, { 0, 0 });
 
-        while(!_kbhit()) {
+        bool interrupted = false;
+        while(!interrupted) {
             for(const std::string& frame : frames) {
                 SetConsoleCursorPosition(context.handle, { 0, 0 });
                 WriteConsoleA(context.handle, frame.c_str(), static_cast<DWORD>(frame.length()), nullptr, nullptr);
 
-                if(_kbhit()) return;
+                if(_kbhit()) {
+                    interrupted = true;
+                    break;
+                }
                 Sleep(frame_delay);
             }
+            if(stop_flag) break;
         }
     }
 };
