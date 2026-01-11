@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
 
     try {
         LAFEngine laf_engine(argv[1]);
-        laf_engine.play(laf_engine.fullscreen_flag, laf_engine.reverse_flag, laf_engine.stop_flag);
+        laf_engine.play();
     } catch(const std::exception& e) {
         std::cerr << "Fatal Error: " << e.what() << std::endl;
         return 1;

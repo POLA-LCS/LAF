@@ -140,11 +140,7 @@ struct LAFEngine {
         }
     }
 
-    inline void play(
-        bool fullscreen_flag,
-        bool reverse_flag,
-        bool stop_flag
-    ) {
+    inline void play() {
         if(reverse_flag) {
             for(int i = static_cast<int>(frames.size()) - 1; i >= 0; --i) {
                 frames.push_back(frames[i]);
