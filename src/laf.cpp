@@ -23,7 +23,7 @@ void print_usage() {
 
 const std::map<std::string, std::string> tag_to_flag = {
     {"Fps", "+fps"},
-    {"File", "positional argument file"},
+    {"File", "position argument file"},
 };
 
 void changeBooleanConfings(const std::string& name, const bool& flag, const bool& counter_flag, bool& value) {
@@ -75,6 +75,8 @@ int main(int argc, char* argv[]) {
         if(eval.state("Fps")) {
             laf_engine.frec = std::stoul(eval.value("Fps"));
         }
+
+        
 
         laf_engine.play();
     } catch(const clab::MissingArgument& e) {
