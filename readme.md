@@ -1,19 +1,20 @@
 # LAF (List of Ascii Frames) v2.0.0
 
 ```laf
- __    _____ _____ 
-|  |  |     |   __|
-|  |  |  |  |  |_
-|  |__|     |   _|
-|_____|__|__|__|
+                      _
+ __    _____ _____   | |   __    _     _          ___    _____         _ _    _____
+|  |  |  _  |   __|  | |  |  |  |_|___| |_    ___|  _|  |  _  |___ ___|_|_|  |   __|___ ___ _____ ___ ___
+|  |__|     |   __|  | |  |  |__| |_ -|  _|  | . |  _|  |     |_ -|  _| | |  |   __|  _| .'|     | -_|_ -|
+|_____|__|__|__|     | |  |_____|_|___|_|    |___|_|    |__|__|___|___|_|_|  |__|  |_| |__,|_|_|_|___|___|
+                     |_|
 ```
 
 A simple player for `.laf` files for Windows.
 
 ## LAF
 
-A LAF file is just a special format for storing ascii frames.  
-Images, videos, gifs or even bitmaps has it's own header to distinguish between them.  
+A LAF file is just a special format for storing ascii frames.
+Images, videos, gifs or even bitmaps has it's own header to distinguish between them.
 This in order to detect which file are you dealing with.
 
 ### Header
@@ -30,7 +31,7 @@ Values are represented in hexadecimal.
 
 ### Flags
 
-Flags are options that can be used to customize the behaviour of the LAF file.  
+Flags are options that can be used to customize the behaviour of the LAF file.
 This flags goes before end of the header and after framerate.
 
 - `F`: when reproducing a LAF the console switches into fullscreen.
