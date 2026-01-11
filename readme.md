@@ -1,9 +1,11 @@
 # LAF (List of Ascii Frames) v2.0.0
 
 ```laf
-▖ ▄▖▄▖
-▌ ▌▌▙▖
-▙▖▛▌▌ 
+ __    _____ _____ 
+|  |  |     |   __|
+|  |  |  |  |  |_
+|  |__|     |   _|
+|_____|__|__|__|
 ```
 
 A simple player for `.laf` files for Windows.
