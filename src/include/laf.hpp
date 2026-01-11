@@ -66,6 +66,21 @@ struct ConsoleContext {
             SendMessage(window, WM_SYSCOMMAND, SC_RESTORE, 0);
         }
     }
+
+    inline void clearScreen() {
+        COORD topLeft = { 0, 0 };
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        DWORD written;
+        DWORD cells;
+
+        if (!GetConsoleScreenBufferInfo(handle, &csbi)) return;
+
+        cells = csbi.dwSize.X * csbi.dwSize.Y;
+
+        FillConsoleOutputCharacter(handle, (TCHAR)' ', cells, topLeft, &written);
+        FillConsoleOutputAttribute(handle, csbi.wAttributes, cells, topLeft, &written);
+        SetConsoleCursorPosition(handle, topLeft);
+    }
 };
 
 /* Logic for parsing and animating LAF files.
@@ -83,16 +98,16 @@ struct LAFEngine {
     inline explicit LAFEngine(const fs::path& path) {
         const std::string path_str = path.string();
         if(!fs::exists(path)) {
-            throw std::runtime_error("ERROR, path: doesn't exists. " + path_str);
+            throw std::runtime_error("path: doesn't exists. " + path_str);
         }
 
         if(fs::is_directory(path)) {
-            throw std::runtime_error("ERROR, path: is a directory. " + path_str);
+            throw std::runtime_error("path: is a directory. " + path_str);
         }
 
         std::ifstream file(path);
         if(!file) {
-            throw std::runtime_error("ERROR, file: Could not open. " + path_str);
+            throw std::runtime_error("file: Could not open. " + path_str);
         }
 
         std::string raw_content = (std::stringstream() << file.rdbuf()).str();
@@ -101,20 +116,19 @@ struct LAFEngine {
             throw std::runtime_error("Header error: Missing LAF identifier.");
         }
 
-        width = std::stoul(raw_content.substr(WIDTH_START, WIDTH_SIZE), nullptr, 16);
+        width  = std::stoul(raw_content.substr(WIDTH_START, WIDTH_SIZE  ), nullptr, 16);
         height = std::stoul(raw_content.substr(HEIGHT_START, HEIGHT_SIZE), nullptr, 16);
-        frec = std::stoul(raw_content.substr(FREC_START, FREC_SIZE), nullptr, 16);
-        if(frec == 0) frec = FREC_DEFAULT;
+        frec   = std::stoul(raw_content.substr(FREC_START, FREC_SIZE    ), nullptr, 16);
 
         size_t data_start = raw_content.find('|');
         if(data_start == std::string::npos) {
-            throw std::runtime_error("ERROR, format: Missing end of header separator '|'.");
+            throw std::runtime_error("format: Missing end of header separator '|'.");
         }
 
         std::string flags = raw_content.substr(HEADER_DATA_END, data_start - HEADER_DATA_END);
-        reverse_flag = (flags.find('R') != std::string::npos);
+        reverse_flag    = (flags.find('R') != std::string::npos);
         fullscreen_flag = (flags.find('F') != std::string::npos);
-        stop_flag = (flags.find('S') != std::string::npos);
+        stop_flag       = (flags.find('S') != std::string::npos);
 
         std::string content = raw_content.substr(data_start + 1);
         content.erase(std::remove(content.begin(), content.end(), '\n'), content.end());
@@ -123,11 +137,11 @@ struct LAFEngine {
         const size_t chars_per_frame = width * height;
 
         if(chars_per_frame == 0) {
-            throw std::runtime_error("ERROR, Header: dimentions must be positive.");
+            throw std::runtime_error("header: dimentions must be positive.");
         }
 
         if(content.length() % chars_per_frame != 0) {
-            throw std::runtime_error("ERROR, Data: Content doesn't match dimentions.");
+            throw std::runtime_error("data: Content doesn't match dimentions.");
         }
 
         size_t total_frames = content.length() / chars_per_frame;
@@ -147,10 +161,12 @@ struct LAFEngine {
             }
         }
 
+        if(!frec) frec = FREC_DEFAULT;
+
         ConsoleContext context(fullscreen_flag);
         uint32_t frame_delay = 1000 / frec;
 
-        SetConsoleCursorPosition(context.handle, { 0, 0 });
+        context.clearScreen();
 
         bool interrupted = false;
         while(!interrupted) {
