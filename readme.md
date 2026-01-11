@@ -9,7 +9,7 @@ A simple `.laf` player files for Windows.
 |_____|__|__|__|
 ```
 
-## LAF
+## File format
 
 A LAF file is just a special format for storing ascii frames.
 Images, videos, gifs or even bitmaps has it's own header to distinguish between them.
@@ -17,7 +17,7 @@ This in order to detect which file are you dealing with.
 
 ### Header
 
-Values are represented in hexadecimal.
+Numbers are represented in hexadecimal.
 
 `LAFWWWHHHFF|` where:
 
@@ -29,11 +29,14 @@ Values are represented in hexadecimal.
 
 ### Flags
 
-Flags are options that can be used to customize the behaviour of the LAF file.
-This flags goes before end of the header and after framerate.
-
-- `F`: when reproducing a LAF the console switches into fullscreen.
-- `R`: the LAF will repeat backwards after last frame.
+Flags are options that can be used to customize the behaviour of the LAF file.  
+This flags goes before end of header and after framerate value.  
+  
+This flags are the default ones and can be changed by providing command line arguments (See `laf.exe --help`).  
+  
+- `F`: Sets the window console to fullscreen (maybe fails if using a special terminal).
+- `R`: Repeats backwards after last frame.
+- `S`: Stops when reached the end.
 
 ## Examples
 
