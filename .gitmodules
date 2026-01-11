@@ -1,0 +1,3 @@
+[submodule "src/CLAB"]
+	path = src/CLAB
+	url = https://github.com/POLA-LCS/CLAB
